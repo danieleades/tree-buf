@@ -41,7 +41,7 @@ impl EncoderArray<bool> for Vec<bool> {
         profile_method!(encode_all);
 
         // See also 42d5f4b4-823f-4ab4-8448-6e1a341ff28b
-        let compressors = (PackedBoolCompressor, RLEBoolCompressor);
+        let compressors = (PackedBoolCompressor, RleBoolCompressor);
         compress(values, stream, &compressors)
     }
     fn flush<O: EncodeOptions>(self, stream: &mut EncoderStream<'_, O>) -> ArrayTypeId {
@@ -52,7 +52,7 @@ impl EncoderArray<bool> for Vec<bool> {
 impl PrimitiveEncoderArray<bool> for Vec<bool> {
     fn fast_size_for_all<O: EncodeOptions>(values: &[bool], options: &O) -> usize {
         // See also 42d5f4b4-823f-4ab4-8448-6e1a341ff28b
-        let compressors = (PackedBoolCompressor, RLEBoolCompressor);
+        let compressors = (PackedBoolCompressor, RleBoolCompressor);
         fast_size_for(values, &compressors, options)
     }
 }
@@ -71,9 +71,9 @@ impl Compressor<bool> for PackedBoolCompressor {
     }
 }
 
-struct RLEBoolCompressor;
+struct RleBoolCompressor;
 
-impl Compressor<bool> for RLEBoolCompressor {
+impl Compressor<bool> for RleBoolCompressor {
     // TODO: fast_size_for
     fn compress<O: EncodeOptions>(&self, data: &[bool], stream: &mut EncoderStream<'_, O>) -> Result<ArrayTypeId, ()> {
         within_rle(|| encode_rle_bool(data, stream))
@@ -94,7 +94,7 @@ impl InfallibleDecoderArray for IntoIter<bool> {
             DynArrayBranch::Boolean(encoding) => {
                 let v = match encoding {
                     ArrayBool::Packed(bytes) => decode_packed_bool(&bytes).into_iter(),
-                    ArrayBool::RLE(first, runs) => {
+                    ArrayBool::Rle(first, runs) => {
                         let runs = <u64 as Decodable>::DecoderArray::new(*runs, options)?;
                         decode_rle_bool(runs, first)
                     }

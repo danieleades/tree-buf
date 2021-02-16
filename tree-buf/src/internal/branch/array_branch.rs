@@ -41,7 +41,7 @@ pub enum ArrayFloat<'a> {
 #[derive(Debug)]
 pub enum ArrayBool<'a> {
     Packed(Bytes<'a>),
-    RLE(bool, Box<DynArrayBranch<'a>>),
+    Rle(bool, Box<DynArrayBranch<'a>>),
 }
 
 #[derive(Debug)]
@@ -86,7 +86,7 @@ pub enum DynArrayBranch<'a> {
         discriminants: Box<DynArrayBranch<'a>>,
         variants: Vec<ArrayEnumVariant<'a>>,
     },
-    RLE {
+    Rle {
         runs: Box<DynArrayBranch<'a>>,
         values: Box<DynArrayBranch<'a>>,
     },
@@ -103,11 +103,9 @@ pub enum DynArrayBranch<'a> {
 
 // TODO: Make this stack based instead of recursion based to not crash on deep inputs
 pub fn decode_next_array<'a>(bytes: &'a [u8], offset: &'_ mut usize, lens: &'_ mut usize) -> DecodeResult<DynArrayBranch<'a>> {
-    let id = ArrayTypeId::decode_next(bytes, offset)?;
-
     use ArrayTypeId::{
         ArrayFixed, ArrayVar, DeltaZig, Dictionary, DoubleGorilla, Enum, IntPrefixVar, IntSimple16, Map, Nullable, Obj0, Obj1, Obj2, Obj3, Obj4, Obj5, Obj6, Obj7, Obj8, ObjN,
-        PackedBool, RLEBoolFalse, RLEBoolTrue, Tuple2, Tuple3, Tuple4, Tuple5, Tuple6, Tuple7, Tuple8, TupleN, Utf8, Void, Zfp32, Zfp64, F32, F64, RLE, U8,
+        PackedBool, Rle, RleBoolFalse, RleBoolTrue, Tuple2, Tuple3, Tuple4, Tuple5, Tuple6, Tuple7, Tuple8, TupleN, Utf8, Void, Zfp32, Zfp64, F32, F64, U8,
     };
 
     fn decode_ints<'a>(bytes: &'a [u8], offset: &'_ mut usize, lens: &'_ mut usize, encoding: ArrayIntegerEncoding) -> DecodeResult<DynArrayBranch<'a>> {
@@ -140,6 +138,8 @@ pub fn decode_next_array<'a>(bytes: &'a [u8], offset: &'_ mut usize, lens: &'_ m
         }
         Ok(DynArrayBranch::Object { fields })
     }
+
+    let id = ArrayTypeId::decode_next(bytes, offset)?;
 
     let branch = match id {
         Nullable => {
@@ -202,10 +202,10 @@ pub fn decode_next_array<'a>(bytes: &'a [u8], offset: &'_ mut usize, lens: &'_ m
             let bytes = decode_bytes_from_len(bytes, offset, lens)?;
             DynArrayBranch::Boolean(ArrayBool::Packed(bytes))
         }
-        RLEBoolTrue | RLEBoolFalse => {
-            let first = matches!(id, ArrayTypeId::RLEBoolTrue);
+        RleBoolTrue | RleBoolFalse => {
+            let first = matches!(id, ArrayTypeId::RleBoolTrue);
             let runs = decode_next_array(bytes, offset, lens)?;
-            DynArrayBranch::Boolean(ArrayBool::RLE(first, runs.into()))
+            DynArrayBranch::Boolean(ArrayBool::Rle(first, runs.into()))
         }
         IntSimple16 => decode_ints(bytes, offset, lens, ArrayIntegerEncoding::Simple16)?,
         IntPrefixVar => decode_ints(bytes, offset, lens, ArrayIntegerEncoding::PrefixVarInt)?,
@@ -253,10 +253,10 @@ pub fn decode_next_array<'a>(bytes: &'a [u8], offset: &'_ mut usize, lens: &'_ m
 
             DynArrayBranch::Enum { discriminants, variants }
         }
-        RLE => {
+        Rle => {
             let values = decode_next_array(bytes, offset, lens)?.into();
             let runs = decode_next_array(bytes, offset, lens)?.into();
-            DynArrayBranch::RLE { runs, values }
+            DynArrayBranch::Rle { runs, values }
         }
         Dictionary => {
             let values = decode_next_array(bytes, offset, lens)?.into();
@@ -288,12 +288,12 @@ impl_type_id!(ArrayTypeId, [
     Enum: 11,
     ArrayFixed: 12,
     U8: 13,
-    RLE: 14,
+    Rle: 14,
     Zfp32: 15,
     Zfp64: 16,
     Dictionary: 17,
-    RLEBoolTrue: 18,
-    RLEBoolFalse: 19,
+    RleBoolTrue: 18,
+    RleBoolFalse: 19,
     DeltaZig: 20,
 ]);
 

@@ -72,12 +72,12 @@ impl<T: Send + Clone> RleIterator<T> {
     }
 }
 
-pub(crate) struct RLE<S> {
+pub(crate) struct Rle<S> {
     // TODO: (Performance) Do not require the allocation of this Vec
     sub_compressors: S,
 }
 
-impl<S> RLE<S> {
+impl<S> Rle<S> {
     pub fn new(sub_compressors: S) -> Self {
         Self { sub_compressors }
     }
@@ -122,7 +122,7 @@ fn get_runs<T: PartialEq + Copy>(data: &[T]) -> Result<(Vec<u64>, Vec<T>), ()> {
     }
 }
 
-impl<T: PartialEq + Copy + std::fmt::Debug, S: CompressorSet<T>> Compressor<T> for RLE<S> {
+impl<T: PartialEq + Copy + std::fmt::Debug, S: CompressorSet<T>> Compressor<T> for Rle<S> {
     fn compress<O: EncodeOptions>(&self, data: &[T], stream: &mut EncoderStream<'_, O>) -> Result<ArrayTypeId, ()> {
         profile_method!(compress);
 
@@ -132,7 +132,7 @@ impl<T: PartialEq + Copy + std::fmt::Debug, S: CompressorSet<T>> Compressor<T> f
             stream.encode_with_id(|stream| compress(&values[..], stream, &self.sub_compressors));
             stream.encode_with_id(|stream| runs.flush(stream));
 
-            Ok(ArrayTypeId::RLE)
+            Ok(ArrayTypeId::Rle)
         })
     }
 

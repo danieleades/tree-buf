@@ -16,11 +16,11 @@ where
     if last_byte_count * 8 != num_bits_last_elm {
         last_byte_count += 1;
     }
-    let last = &bytes[bytes.len() - last_byte_count as usize..];
-    let bytes = &bytes[..bytes.len() - last.len()];
+    let last_bytes = &bytes[bytes.len() - last_byte_count as usize..];
+    let bytes = &bytes[..bytes.len() - last_bytes.len()];
     let mut last_2 = [0_u8; 8];
-    for (i, value) in last.iter().enumerate() {
-        last_2[i + (8 - last.len())] = *value;
+    for (i, value) in last_bytes.iter().enumerate() {
+        last_2[i + (8 - last_bytes.len())] = *value;
     }
     let last = u64::from_le_bytes(last_2);
     // TODO: Change this to check that num_bits_last_elm is correct

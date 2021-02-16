@@ -1,6 +1,6 @@
 use crate::internal::encodings::varint::{decode_prefix_varint, encode_prefix_varint, size_for_varint};
 use crate::prelude::*;
-use rle::RLE;
+use rle::Rle;
 use std::borrow::Borrow;
 use std::vec::IntoIter;
 
@@ -74,7 +74,7 @@ impl EncoderArray<String> for Vec<&'static String> {
     fn flush<O: EncodeOptions>(self, stream: &mut EncoderStream<'_, O>) -> ArrayTypeId {
         profile_method!(flush);
 
-        let compressors = (Utf8Compressor, RLE::new((Utf8Compressor,)), Dictionary::new((Utf8Compressor,)));
+        let compressors = (Utf8Compressor, Rle::new((Utf8Compressor,)), Dictionary::new((Utf8Compressor,)));
 
         compress(&self[..], stream, &compressors)
     }
@@ -93,6 +93,7 @@ impl Decodable for String {
     }
 }
 
+#[allow(clippy::needless_collect)]
 #[cfg(feature = "decode")]
 impl InfallibleDecoderArray for IntoIter<String> {
     type Decode = String;
@@ -107,7 +108,7 @@ impl InfallibleDecoderArray for IntoIter<String> {
                 let strs = decode_all(&bytes, |b, o| decode_str(b, o).map(std::borrow::ToOwned::to_owned))?;
                 Ok(strs.into_iter())
             }
-            DynArrayBranch::RLE { runs, values } => {
+            DynArrayBranch::Rle { runs, values } => {
                 let rle = RleIterator::new(runs, values, options, |values| Self::new_infallible(values, options))?;
                 let all = rle.collect::<Vec<_>>();
                 Ok(all.into_iter())

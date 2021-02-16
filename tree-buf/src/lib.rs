@@ -1,3 +1,20 @@
+#![deny(clippy::all)]
+#![warn(clippy::pedantic)]
+//
+// "This lint is meant to be deactivated by everyone doing serious performance work.
+//  This means having done the measurement."
+// (https://rust-lang.github.io/rust-clippy/master/index.html#inline_always)
+#![allow(clippy::inline_always)]
+//
+// Temp:
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::result_unit_err)]
+#![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::module_name_repetitions)]
+
 #[doc(hidden)]
 pub mod internal;
 

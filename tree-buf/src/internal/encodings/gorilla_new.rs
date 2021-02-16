@@ -33,14 +33,14 @@ pub fn size_for(data: impl Iterator<Item = f64>) -> Result<usize, ()> {
         if let 0 = xored {
             bits += 1;
         } else {
-            let lz = xored.leading_zeros().min(31) as usize;
-            let tz = xored.trailing_zeros() as usize;
-            let prev_lz = prev_xor.leading_zeros() as usize;
-            let prev_tz = if prev_lz == 64 { 0 } else { prev_xor.trailing_zeros() as usize };
-            if lz >= prev_lz && tz >= prev_tz {
-                bits += 66 - prev_tz - prev_lz;
+            let leading_zeros = xored.leading_zeros().min(31) as usize;
+            let trailing_zeros = xored.trailing_zeros() as usize;
+            let prev_leading_zeros = prev_xor.leading_zeros() as usize;
+            let prev_trailing_zeros = if prev_leading_zeros == 64 { 0 } else { prev_xor.trailing_zeros() as usize };
+            if leading_zeros >= prev_leading_zeros && trailing_zeros >= prev_trailing_zeros {
+                bits += 66 - prev_trailing_zeros - prev_leading_zeros;
             } else {
-                bits += 77 - tz - lz;
+                bits += 77 - trailing_zeros - leading_zeros;
             }
         }
 
@@ -96,22 +96,22 @@ pub fn compress(data: impl Iterator<Item = f64>, bytes: &mut Vec<u8>) -> Result<
         if let 0 = xored {
             encode(0, 1, capacity, buffer, bytes)
         } else {
-            let lz = u64::from(xored.leading_zeros().min(31));
-            let tz = u64::from(xored.trailing_zeros());
-            let prev_lz = u64::from(prev_xor.leading_zeros());
-            let prev_tz = if prev_lz == 64 { 0 } else { u64::from(prev_xor.trailing_zeros()) };
-            if lz >= prev_lz && tz >= prev_tz {
-                let meaningful_bits = xored >> prev_tz;
-                let meaningful_bit_count = 64 - prev_tz - prev_lz;
+            let leading_zeros = u64::from(xored.leading_zeros().min(31));
+            let trailing_zeros = u64::from(xored.trailing_zeros());
+            let prev_leading_zeros = u64::from(prev_xor.leading_zeros());
+            let prev_trailing_zeros = if prev_leading_zeros == 64 { 0 } else { u64::from(prev_xor.trailing_zeros()) };
+            if leading_zeros >= prev_leading_zeros && trailing_zeros >= prev_trailing_zeros {
+                let meaningful_bits = xored >> prev_trailing_zeros;
+                let meaningful_bit_count = 64 - prev_trailing_zeros - prev_leading_zeros;
 
                 encode(0b10, 2, capacity, buffer, bytes);
                 encode(meaningful_bits, meaningful_bit_count as u8, capacity, buffer, bytes);
             } else {
-                let meaningful_bits = xored >> tz;
-                let meaningful_bit_count = 64 - tz - lz;
+                let meaningful_bits = xored >> trailing_zeros;
+                let meaningful_bit_count = 64 - trailing_zeros - leading_zeros;
 
                 encode(0b11, 2, capacity, buffer, bytes);
-                encode(lz, 5, capacity, buffer, bytes);
+                encode(leading_zeros, 5, capacity, buffer, bytes);
                 encode(meaningful_bit_count - 1, 6, capacity, buffer, bytes);
                 encode(meaningful_bits, meaningful_bit_count as u8, capacity, buffer, bytes);
             }

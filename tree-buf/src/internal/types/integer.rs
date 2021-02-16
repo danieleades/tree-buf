@@ -7,7 +7,6 @@ use num_traits::{AsPrimitive, Bounded};
 use simple_16::Simple16;
 use std::any::TypeId;
 use std::convert::{TryFrom, TryInto};
-use std::mem::transmute;
 use std::vec::IntoIter;
 use zigzag::ZigZag;
 
@@ -27,9 +26,11 @@ mod _0 {
     use super::{ArrayTypeId, EncodeOptions, EncoderStream, U0};
     pub type Type = U0;
 
+    #[allow(clippy::clippy::needless_pass_by_value)]
     pub fn encode_array<T, O: EncodeOptions>(_data: &[T], _max: T, _stream: &mut EncoderStream<'_, O>) -> ArrayTypeId {
         unreachable!();
     }
+    #[allow(clippy::clippy::needless_pass_by_value)]
     pub fn fast_size_for_array<T, O>(_data: &[T], _max: T, _options: O) -> usize {
         unreachable!();
     }
@@ -193,7 +194,7 @@ macro_rules! impl_lowerable {
                                 }
                             }
                         },
-                        DynArrayBranch::RLE { runs, values } => {
+                        DynArrayBranch::Rle { runs, values } => {
                             let rle = RleIterator::new(runs, values, options, |values| Self::new_infallible(values, options))?;
                             let all = rle.collect::<Vec<_>>();
                             Ok(all.into_iter())
@@ -221,6 +222,14 @@ macro_rules! impl_lowerable {
             pub fn fast_size_for_array<O: EncodeOptions, T: Copy + std::fmt::Debug + AsPrimitive<$Ty> + AsPrimitive<U0> + AsPrimitive<u8> + AsPrimitive<$lower::Type> $(+ AsPrimitive<$lowers>),*>
                 (data: &[T], max: T, options: &O) -> usize {
 
+                fn fast_inner<O: EncodeOptions>(data: &[$Ty], options: &O, max: $Ty) -> usize {
+                    let compressors = (
+                        $(<$compressions>::new(max),)+
+                        Rle::new(($(<$compressions>::new(max),)+))
+                    );
+                    fast_size_for(data, &compressors, options)
+                }
+
                 let lower_max: Result<$Ty, _> = <$lower::Type as Bounded>::max_value().try_into();
 
                 if let Ok(lower_max) = lower_max {
@@ -229,18 +238,12 @@ macro_rules! impl_lowerable {
                     }
                 }
 
-                fn fast_inner<O: EncodeOptions>(data: &[$Ty], options: &O, max: $Ty) -> usize {
-                    let compressors = (
-                        $(<$compressions>::new(max),)+
-                        RLE::new(($(<$compressions>::new(max),)+))
-                    );
-                    fast_size_for(data, &compressors, options)
-                }
 
                 // Convert data to as<T>, using a transmute if that's already correct
                 if TypeId::of::<$Ty>() == TypeId::of::<T>() {
                     // Safety - this is a unit conversion.
-                    let data = unsafe { transmute(data) };
+                    // Note: transmuting references is bad; Do a pointer cast + reborrow instead:
+                    let data = unsafe { &*(data as *const [T] as *const [$Ty]) };
                     fast_inner(data, options, max.as_())
                 } else {
                     // TODO: (Performance) Use second-stack
@@ -256,6 +259,14 @@ macro_rules! impl_lowerable {
             pub fn encode_array<O: EncodeOptions, T: Copy + std::fmt::Debug + AsPrimitive<$Ty> + AsPrimitive<U0> + AsPrimitive<u8> + AsPrimitive<$lower::Type> $(+ AsPrimitive<$lowers>),*>
                 (data: &[T], max: T, stream: &mut EncoderStream<'_, O>) -> ArrayTypeId {
 
+                fn encode_inner<O: EncodeOptions>(data: &[$Ty], stream: &mut EncoderStream<'_, O>, max: $Ty) -> ArrayTypeId {
+                    let compressors = (
+                        $(<$compressions>::new(max),)+
+                        Rle::new(($(<$compressions>::new(max),)+))
+                    );
+                    compress(data, stream, &compressors)
+                }
+
                 let lower_max: Result<$Ty, _> = <$lower::Type as Bounded>::max_value().try_into();
 
                 if let Ok(lower_max) = lower_max {
@@ -264,18 +275,13 @@ macro_rules! impl_lowerable {
                     }
                 }
 
-                fn encode_inner<O: EncodeOptions>(data: &[$Ty], stream: &mut EncoderStream<'_, O>, max: $Ty) -> ArrayTypeId {
-                    let compressors = (
-                        $(<$compressions>::new(max),)+
-                        RLE::new(($(<$compressions>::new(max),)+))
-                    );
-                    compress(data, stream, &compressors)
-                }
 
                 // Convert data to as<T>, using a transmute if that's already correct
                 if TypeId::of::<$Ty>() == TypeId::of::<T>() {
                     // Safety - this is a unit conversion.
-                    let data = unsafe { transmute(data) };
+                    // Note: transmuting references is bad; Do a pointer cast + reborrow instead:
+                    let data = unsafe { &*(data as *const [T] as *const [$Ty]) };
+
                     encode_inner(data, stream, max.as_())
                 } else {
                     // TODO: (Performance) Use second-stack
@@ -349,6 +355,7 @@ fn encode_root_uint(value: u64, bytes: &mut Vec<u8>) -> RootTypeId {
 struct DeltaZigZagCompressor;
 impl DeltaZigZagCompressor {
     #[inline(always)]
+    #[allow(clippy::needless_pass_by_value)]
     pub fn new<T>(_max: T) -> Self {
         Self
     }
@@ -391,6 +398,7 @@ struct PrefixVarIntCompressor;
 
 impl PrefixVarIntCompressor {
     #[inline(always)]
+    #[allow(clippy::needless_pass_by_value)]
     pub fn new<T>(_max: T) -> Self {
         Self
     }
@@ -456,6 +464,7 @@ impl<T: Simple16 + PartialOrd> Compressor<T> for Simple16Compressor<T> {
 struct BytesCompressor;
 impl BytesCompressor {
     #[inline(always)]
+    #[allow(clippy::needless_pass_by_value)]
     pub fn new<T>(_max: T) -> Self {
         Self
     }
