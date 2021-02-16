@@ -52,8 +52,6 @@ pub enum DynRootBranch<'a> {
 }
 
 pub fn decode_next_root<'a>(bytes: &'a [u8], offset: &'_ mut usize, lens: &'_ mut usize) -> DecodeResult<DynRootBranch<'a>> {
-    let id = RootTypeId::decode_next(bytes, offset)?;
-
     // See also e25db64d-8424-46b9-bdc1-cdb618807513
     fn decode_tuple<'a>(num_fields: usize, bytes: &'a [u8], offset: &'_ mut usize, lens: &'_ mut usize) -> DecodeResult<DynRootBranch<'a>> {
         let mut fields = Vec::with_capacity(num_fields);
@@ -91,6 +89,9 @@ pub fn decode_next_root<'a>(bytes: &'a [u8], offset: &'_ mut usize, lens: &'_ mu
         NaN, NegOne, Obj0, Obj1, Obj2, Obj3, Obj4, Obj5, Obj6, Obj7, Obj8, ObjN, One, Str, Str0, Str1, Str2, Str3, True, Tuple2, Tuple3, Tuple4, Tuple5, Tuple6, Tuple7, Tuple8,
         TupleN, Void, Zero, F32, F64,
     };
+
+    let id = RootTypeId::decode_next(bytes, offset)?;
+
     let branch = match id {
         Void => DynRootBranch::Void,
 

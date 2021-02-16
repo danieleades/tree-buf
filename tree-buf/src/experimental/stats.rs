@@ -111,7 +111,7 @@ fn visit_array(path: &Path, branch: &DynArrayBranch, breakdown: &mut SizeBreakdo
         }
         DynArrayBranch::Boolean(enc) => match enc {
             ArrayBool::Packed(b) => breakdown.add(&path, "Packed Boolean", b),
-            ArrayBool::RLE(_first, runs) => visit_array(&path.a(&"runs", &"Bool RLE"), runs, breakdown),
+            ArrayBool::Rle(_first, runs) => visit_array(&path.a(&"runs", &"Bool Rle"), runs, breakdown),
         },
         DynArrayBranch::Float(f) => match f {
             ArrayFloat::DoubleGorilla(b) => breakdown.add(&path, "Gorilla", b),
@@ -136,9 +136,9 @@ fn visit_array(path: &Path, branch: &DynArrayBranch, breakdown: &mut SizeBreakdo
                 visit_array(&path.a(name, &"Object"), field, breakdown);
             }
         }
-        DynArrayBranch::RLE { runs, values } => {
-            visit_array(&path.a(&"runs", &"RLE"), runs, breakdown);
-            visit_array(&path.a(&"values", &"RLE"), values, breakdown);
+        DynArrayBranch::Rle { runs, values } => {
+            visit_array(&path.a(&"runs", &"Rle"), runs, breakdown);
+            visit_array(&path.a(&"values", &"Rle"), values, breakdown);
         }
         DynArrayBranch::Dictionary { indices, values } => {
             visit_array(&path.a(&"indices", &"Dictionary"), indices, breakdown);
@@ -239,16 +239,16 @@ fn visit(path: &Path, branch: &DynRootBranch<'_>, breakdown: &mut SizeBreakdown)
 ///            Object.Object.Array.Object.Object.Object.Array.Enum.Packed Boolean
 ///         120
 ///            data.orders.[1000].nft.wearable.bodyShapes.len.runs
-///            Object.Object.Array.Object.Object.Object.Array.RLE.Simple16
+///            Object.Object.Array.Object.Object.Object.Array.Rle.Simple16
 ///         85
 ///            data.orders.[1000].nft.wearable.collection.values
 ///            Object.Object.Array.Object.Object.Object.Dictionary.UTF-8
 ///         60
 ///            data.orders.[1000].nft.wearable.bodyShapes.len.values
-///            Object.Object.Array.Object.Object.Object.Array.RLE.Simple16
+///            Object.Object.Array.Object.Object.Object.Array.Rle.Simple16
 ///         2
 ///            data.orders.[1000].nft.wearable.owner.mana.runs
-///            Object.Object.Array.Object.Object.Object.Object.Bool RLE.Prefix Varint
+///            Object.Object.Array.Object.Object.Object.Object.Bool Rle.Prefix Varint
 ///
 /// Largest by type:
 ///          1x 32000 @ U8 Fixed

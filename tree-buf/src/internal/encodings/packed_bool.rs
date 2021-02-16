@@ -4,8 +4,11 @@ use crate::prelude::*;
 pub fn encode_packed_bool(items: &[bool], bytes: &mut Vec<u8>) {
     profile_fn!(encode_packed_bool);
 
+    bytes.reserve(items.len() / 8);
+
     let mut offset = 0;
     while offset + 7 < items.len() {
+        #[allow(clippy::identity_op)]
         let b = (items[offset + 0] as u8) << 0
             | (items[offset + 1] as u8) << 1
             | (items[offset + 2] as u8) << 2

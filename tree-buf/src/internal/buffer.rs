@@ -67,6 +67,7 @@ impl<T> Buffer<T> {
     pub const CAPACITY: usize = SIZE / size_of::<T>();
 
     #[inline(always)]
+    #[allow(clippy::unused_self)]
     pub const fn capacity(&self) -> usize {
         Self::CAPACITY
     }

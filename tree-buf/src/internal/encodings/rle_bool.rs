@@ -32,7 +32,7 @@ fn bool_runs_and_id(items: &[bool]) -> Result<(Vec<u64>, ArrayTypeId), ()> {
     }
 
     let mut current_value = items[0];
-    let type_id = if current_value { ArrayTypeId::RLEBoolTrue } else { ArrayTypeId::RLEBoolFalse };
+    let type_id = if current_value { ArrayTypeId::RleBoolTrue } else { ArrayTypeId::RleBoolFalse };
     let mut current_run: u64 = 0;
     // TODO: (Performance) use second-stack
     let mut runs = Vec::new();
